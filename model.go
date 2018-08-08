@@ -19,12 +19,12 @@ type Host struct {
 
 // UnanimityHost  id标示的主机
 type UnanimityHost struct {
-	ID   string `json:"id"`
+	Host string `json:"host"`
 	Port int    `json:"port"`
 }
 
 func (uh *UnanimityHost) String() string {
-	return fmt.Sprintf("%s:%d", uh.ID, uh.Port)
+	return fmt.Sprintf("%s:%d", uh.Host, uh.Port)
 }
 
 // UnanimityHostWithDomains   带域名的id标示的主机
