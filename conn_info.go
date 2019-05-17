@@ -80,19 +80,13 @@ func GetMySQLConnInfo(conn *sql.DB) (connInfo string, err error) {
 func resolveDsn(dsn string) (info map[string]string, err error) {
 	info = make(map[string]string)
 
-	// r, _ := regexp.Compile("p(?P<haha>[a-z]+)ch")
-	r, err := regexp.Compile(`.*:.*@tcp\((?P<host>[\w.]+):(?P<port>\d+)\)/`)
-	if err != nil {
-		return
-	}
+	pattern := regexp.MustCompile(`.*:.*@tcp\((?P<host>[\w.]+):(?P<port>\d+)\)/`)
 
-	subStrs := r.FindStringSubmatch(dsn)
-	for idx, name := range r.SubexpNames() {
-		if len(name) < 1 {
-			continue
+	match := pattern.FindStringSubmatch(dsn)
+	for idx, name := range pattern.SubexpNames() {
+		if idx > 0 && idx <= len(match) {
+			info[name] = match[idx]
 		}
-
-		info[name] = subStrs[idx]
 	}
 
 	return
