@@ -210,10 +210,12 @@ func (pmd *PooledMysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
 // ExecQuery 执行MySQL Query语句
 func (md *MysqlDB) ExecQuery(stmt string) (rows *sql.Rows, err error) {
 	conn, err := md.GetConnection()
+	if conn != nil {
+		defer CloseConnection(conn)
+	}
 	if err != nil {
 		return
 	}
-	defer CloseConnection(conn)
 
 	rows, err = conn.Query(stmt)
 	return
