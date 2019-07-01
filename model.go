@@ -268,15 +268,16 @@ func (md *MysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
 
 	connStr := md.fillConnStr()
 
-	stmtDB, err := sql.Open(md.DatabaseType, connStr)
+	db, err := sql.Open(md.DatabaseType, connStr)
 	if err != nil {
-		if stmtDB != nil {
-			stmtDB.Close()
+		if db != nil {
+			db.Close()
 		}
 		return nil, err
 	}
 
-	rows, err = stmtDB.Query(stmt)
+	rows, err = db.Query(stmt)
+	defer rows.Close()
 	return
 }
 
