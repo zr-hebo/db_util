@@ -114,10 +114,15 @@ func (md *MysqlDB) GetConnection() (*sql.DB, error) {
 
 	stmtDB, err := sql.Open(md.DatabaseType, connStr)
 	if err != nil {
+		if stmtDB != nil {
+			stmtDB.Close()
+		}
 		return nil, err
 	}
 
 	stmtDB.SetMaxOpenConns(0)
+	// stmtDB.SetConnMaxLifetime(time.Second * 10)
+
 	if err := stmtDB.Ping(); err != nil {
 		return nil, err
 	}
@@ -211,7 +216,7 @@ func (pmd *PooledMysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
 func (md *MysqlDB) ExecQuery(stmt string) (rows *sql.Rows, err error) {
 	conn, err := md.GetConnection()
 	if conn != nil {
-		defer CloseConnection(conn)
+		defer conn.Close()
 	}
 	if err != nil {
 		return
@@ -224,10 +229,12 @@ func (md *MysqlDB) ExecQuery(stmt string) (rows *sql.Rows, err error) {
 // QueryRows 执行MySQL Query语句，返回多条数据
 func (md *MysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
 	conn, err := md.GetConnection()
+	if conn != nil {
+		defer conn.Close()
+	}
 	if err != nil {
 		return
 	}
-	defer CloseConnection(conn)
 
 	rows, err = conn.Query(stmt)
 	return
@@ -236,10 +243,12 @@ func (md *MysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
 func (md *MysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
 	conn, err := md.GetConnection()
+	if conn != nil {
+		defer conn.Close()
+	}
 	if err != nil {
 		return
 	}
-	defer CloseConnection(conn)
 
 	row = conn.QueryRow(stmt)
 	return
@@ -249,6 +258,9 @@ func (md *MysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
 func (md *MysqlDB) ExecChange(stmt string, args ...interface{}) (
 	result sql.Result, err error) {
 	conn, err := md.GetConnection()
+	if conn != nil {
+		defer conn.Close()
+	}
 	if err != nil {
 		return
 	}
