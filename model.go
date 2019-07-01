@@ -145,6 +145,8 @@ func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 		return nil, err
 	}
 
+
+
 	stmtDB.SetMaxOpenConns(1)
 	stmtDB.SetMaxIdleConns(1)
 	stmtDB.SetConnMaxLifetime(time.Second*3)
@@ -264,18 +266,17 @@ func (md *MysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
+	connStr := md.fillConnStr()
 
-	conn, err := md.getRealConnection(ctx)
+	stmtDB, err := sql.Open(md.DatabaseType, connStr)
 	if err != nil {
-		if conn != nil {
-			defer conn.Close()
+		if stmtDB != nil {
+			stmtDB.Close()
 		}
-		return
+		return nil, err
 	}
 
-	rows, err = conn.QueryContext(ctx, stmt)
+	rows, err = stmtDB.Query(stmt)
 	return
 }
 
