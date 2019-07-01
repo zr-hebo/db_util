@@ -1,9 +1,11 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sync"
+	"time"
 )
 
 const (
@@ -121,9 +123,10 @@ func (md *MysqlDB) GetConnection() (*sql.DB, error) {
 	}
 
 	stmtDB.SetMaxOpenConns(0)
-	// stmtDB.SetConnMaxLifetime(time.Second * 10)
 
-	if err := stmtDB.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	if err := stmtDB.PingContext(ctx); err != nil {
 		return nil, err
 	}
 
