@@ -145,7 +145,9 @@ func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 		return nil, err
 	}
 
-	stmtDB.SetMaxOpenConns(0)
+	stmtDB.SetMaxOpenConns(1)
+	stmtDB.SetMaxIdleConns(1)
+	stmtDB.SetConnMaxLifetime(time.Second*3)
 
 	conn, err := stmtDB.Conn(ctx);
 	if err != nil {
