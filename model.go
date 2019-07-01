@@ -37,11 +37,11 @@ type UnanimityHostWithDomains struct {
 // MysqlDB Mysql主机实例
 type MysqlDB struct {
 	Host
-	UserName           string
-	Passwd             string
-	DatabaseType       string
-	DBName             string
-	ConnectOuttimeInMS int
+	UserName       string
+	Passwd         string
+	DatabaseType   string
+	DBName         string
+	ConnectTimeout int
 }
 
 // PooledMysqlDB Mysql主机实例
@@ -273,9 +273,9 @@ func (md *MysqlDB) ExecChange(stmt string, args ...interface{}) (
 func (md *MysqlDB) fillConnStr() string {
 	dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
 		md.UserName, md.Passwd, md.IP, md.Port, md.DBName)
-	if md.ConnectOuttimeInMS > 0 {
-		dbServerInfoStr = fmt.Sprintf("%s?timeout=%dms",
-			dbServerInfoStr, md.ConnectOuttimeInMS)
+	if md.ConnectTimeout > 0 {
+		dbServerInfoStr = fmt.Sprintf("%s?timeout=%ds&readTimeout=%ds&writeTimeout=%ds",
+			dbServerInfoStr, md.ConnectTimeout, md.ConnectTimeout, md.ConnectTimeout)
 	}
 
 	return dbServerInfoStr
