@@ -133,6 +133,31 @@ func (md *MysqlDB) GetConnection() (*sql.DB, error) {
 	return stmtDB, nil
 }
 
+// GetConnection 获取数据库连接
+func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
+	connStr := md.fillConnStr()
+
+	stmtDB, err := sql.Open(md.DatabaseType, connStr)
+	if err != nil {
+		if stmtDB != nil {
+			stmtDB.Close()
+		}
+		return nil, err
+	}
+
+	stmtDB.SetMaxOpenConns(0)
+
+	conn, err := stmtDB.Conn(ctx);
+	if err != nil {
+		if conn != nil {
+			conn.Close()
+		}
+		return nil, err
+	}
+
+	return conn, nil
+}
+
 // CloseConnection 获取数据库连接
 func (pmd *PooledMysqlDB) CloseConnection() (err error) {
 	if pmd.conn == nil {
@@ -231,45 +256,71 @@ func (md *MysqlDB) ExecQuery(stmt string) (rows *sql.Rows, err error) {
 
 // QueryRows 执行MySQL Query语句，返回多条数据
 func (md *MysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
-	conn, err := md.GetConnection()
-	if conn != nil {
-		defer conn.Close()
-	}
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query rows failed <-- %s", err.Error())
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	conn, err := md.getRealConnection(ctx)
 	if err != nil {
+		if conn != nil {
+			defer conn.Close()
+		}
 		return
 	}
 
-	rows, err = conn.Query(stmt)
+	rows, err = conn.QueryContext(ctx, stmt)
 	return
 }
 
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
 func (md *MysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
-	conn, err := md.GetConnection()
-	if conn != nil {
-		defer conn.Close()
-	}
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query row failed <-- %s", err.Error())
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	conn, err := md.getRealConnection(ctx)
 	if err != nil {
+		if conn != nil {
+			defer conn.Close()
+		}
 		return
 	}
 
-	row = conn.QueryRow(stmt)
+	row = conn.QueryRowContext(ctx, stmt)
 	return
 }
 
-// ExecChange 执行MySQL Query语句
+// ExecChange 执行MySQL DML Query语句
 func (md *MysqlDB) ExecChange(stmt string, args ...interface{}) (
 	result sql.Result, err error) {
-	conn, err := md.GetConnection()
-	if conn != nil {
-		defer conn.Close()
-	}
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("execute dml failed <-- %s", err.Error())
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	conn, err := md.getRealConnection(ctx)
 	if err != nil {
+		if conn != nil {
+			defer conn.Close()
+		}
 		return
 	}
-	defer CloseConnection(conn)
 
-	result, err = conn.Exec(stmt, args...)
+	result, err = conn.ExecContext(ctx, stmt, args...)
 	return
 }
 
