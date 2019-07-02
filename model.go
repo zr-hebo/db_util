@@ -277,9 +277,197 @@ func (md *MysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
 	}
 
 	rows, err = db.Query(stmt)
-	defer rows.Close()
+	if err != nil {
+		if rows != nil {
+			rows.Close()
+		}
+		return
+	}
+
 	return
 }
+
+type Field struct {
+	Name string
+	Type string
+}
+
+// FieldType Common type include "STRING", "FLOAT", "INT", "BOOL"
+func (f *Field) FieldType() string {
+	return f.Type
+}
+
+type QueryRows struct {
+	Fields []Field
+	Records []map[string]interface{}
+}
+
+func NewQueryRows() *QueryRows {
+	queryRows := new(QueryRows)
+	queryRows.Fields = make([]Field, 0)
+	queryRows.Records = make([]map[string]interface{}, 0)
+	return queryRows
+}
+
+
+// QueryRowsInDict 执行MySQL Query语句，返回多条数据
+func (md *MysqlDB) QueryRowsInDict(stmt string) (queryRows *QueryRows, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query rows failed <-- %s", err.Error())
+		}
+	}()
+
+	connStr := md.fillConnStr()
+
+	db, err := sql.Open(md.DatabaseType, connStr)
+	if db != nil {
+		defer db.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	rawRows, err := db.Query(stmt)
+	if rawRows != nil {
+		defer rawRows.Close()
+	}
+	if err != nil {
+		return
+	}
+
+	colTypes, err := rawRows.ColumnTypes()
+	if err != nil {
+		return
+	}
+
+	fields := make([]Field, 0, len(colTypes))
+	for _, colType := range colTypes{
+		fields = append(fields, Field{Name:colType.Name(), Type:getDataType(colType.DatabaseTypeName())})
+	}
+
+	queryRows = NewQueryRows()
+	queryRows.Fields = fields
+	for rawRows.Next() {
+		receiver := createReceiver(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			return
+		}
+
+		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
+	}
+	return
+}
+
+func createReceiver(fields []Field) (receiver []interface{}) {
+	receiver = make([]interface{}, 0, len(fields))
+	for _, field := range fields {
+		switch field.Type {
+		case "string":
+			{
+				var val sql.NullString
+				receiver = append(receiver, &val)
+			}
+		case "int64":
+			{
+				var val sql.NullInt64
+				receiver = append(receiver, &val)
+			}
+		case "float64":
+			{
+				var val sql.NullFloat64
+				receiver = append(receiver, &val)
+			}
+		case "bool":
+			{
+				var val sql.NullBool
+				receiver = append(receiver, &val)
+			}
+		default:
+			var val sql.NullString
+			receiver = append(receiver, &val)
+		}
+	}
+
+	return
+}
+
+func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[string]interface{}) {
+	record = make(map[string]interface{})
+	for idx := 0; idx < len(fields); idx ++ {
+		field := fields[idx]
+		value := receiver[idx]
+		switch field.Type {
+		case "string":
+			{
+				nullVal :=  value.(sql.NullString)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					record[field.Name] = nullVal.String
+				}
+			}
+		case "int64":
+			{
+				nullVal :=  value.(sql.NullInt64)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					record[field.Name] = nullVal.Int64
+				}
+			}
+		case "float64":
+			{
+				nullVal :=  value.(sql.NullFloat64)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					record[field.Name] = nullVal.Float64
+				}
+			}
+		case "bool":
+			{
+				nullVal :=  value.(sql.NullBool)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					record[field.Name] = nullVal.Bool
+				}				}
+		default:
+			nullVal :=  value.(sql.NullString)
+			record[field.Name] = nil
+			if nullVal.Valid {
+				record[field.Name] = nullVal.String
+			}
+		}
+	}
+	return
+}
+
+func getDataType(dbColType string) (colType string) {
+	var columnTypeDict = map[string]string{
+		"VARCHAR": "string",
+		"TEXT": "string",
+		"NVARCHAR": "string",
+		"DATETIME": "float64",
+		"DECIMAL": "float64",
+		"BOOL": "bool",
+		"INT": "int64",
+		"BIGINT": "int64",
+	}
+
+	colType, ok := columnTypeDict[dbColType]
+	if ok {
+		return
+	}
+
+	colType = "string"
+	return
+
+	// sql.NullBool
+	// sql.NullFloat64
+	// sql.NullInt64
+	// sql.NullString
+}
+
+
 
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
 func (md *MysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
