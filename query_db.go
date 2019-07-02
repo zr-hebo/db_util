@@ -67,6 +67,29 @@ func NewMysqlDBWithAllParam(
 }
 
 // GetConnection 获取数据库连接
+func (md *MysqlDB) getConnection() (*sql.DB, error) {
+	connStr := md.fillConnStr()
+
+	stmtDB, err := sql.Open(md.DatabaseType, connStr)
+	if err != nil {
+		if stmtDB != nil {
+			stmtDB.Close()
+		}
+		return nil, err
+	}
+
+	stmtDB.SetMaxOpenConns(0)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	if err := stmtDB.PingContext(ctx); err != nil {
+		return nil, err
+	}
+
+	return stmtDB, nil
+}
+
+// GetConnection 获取数据库连接
 func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 	connStr := md.fillConnStr()
 

@@ -71,7 +71,7 @@ func (pmd *PooledMysqlDB) GetConnection() (conn *sql.DB, err error) {
 		return
 	}
 
-	conn, err = pmd.MysqlDB.GetConnection()
+	conn, err = pmd.MysqlDB.getConnection()
 	if err != nil {
 		return
 	}
