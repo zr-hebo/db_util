@@ -401,7 +401,7 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 		switch field.Type {
 		case "string":
 			{
-				nullVal :=  value.(sql.NullString)
+				nullVal := value.(*sql.NullString)
 				record[field.Name] = nil
 				if nullVal.Valid {
 					record[field.Name] = nullVal.String
@@ -409,7 +409,7 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 			}
 		case "int64":
 			{
-				nullVal :=  value.(sql.NullInt64)
+				nullVal := value.(*sql.NullInt64)
 				record[field.Name] = nil
 				if nullVal.Valid {
 					record[field.Name] = nullVal.Int64
@@ -417,7 +417,7 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 			}
 		case "float64":
 			{
-				nullVal :=  value.(sql.NullFloat64)
+				nullVal := value.(*sql.NullFloat64)
 				record[field.Name] = nil
 				if nullVal.Valid {
 					record[field.Name] = nullVal.Float64
@@ -425,13 +425,13 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 			}
 		case "bool":
 			{
-				nullVal :=  value.(sql.NullBool)
+				nullVal := value.(*sql.NullBool)
 				record[field.Name] = nil
 				if nullVal.Valid {
 					record[field.Name] = nullVal.Bool
 				}				}
 		default:
-			nullVal :=  value.(sql.NullString)
+			nullVal := value.(*sql.NullString)
 			record[field.Name] = nil
 			if nullVal.Valid {
 				record[field.Name] = nullVal.String
