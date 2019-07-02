@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"sync"
+	"time"
 )
 
 
@@ -76,7 +77,7 @@ func (pmd *PooledMysqlDB) GetConnection() (conn *sql.DB, err error) {
 		return
 	}
 
-	conn.SetConnMaxLifetime(0)
+	conn.SetConnMaxLifetime(time.Second * 60 * 30)
 	conn.SetMaxOpenConns(0)
 	if err := conn.Ping(); err != nil {
 		return nil, err
@@ -89,44 +90,16 @@ func (pmd *PooledMysqlDB) GetConnection() (conn *sql.DB, err error) {
 // ExecChange 执行MySQL Query语句
 func (pmd *PooledMysqlDB) ExecChange(stmt string, args ...interface{}) (
 	result sql.Result, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
-
-	result, err = conn.Exec(stmt, args...)
-	return
-}
-
-// ExecQuery 执行MySQL Query语句
-func (pmd *PooledMysqlDB) ExecQuery(stmt string) (rows *sql.Rows, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
-
-	rows, err = conn.Query(stmt)
-	return
+	return pmd.MysqlDB.ExecChange(stmt, args...)
 }
 
 // QueryRows 执行MySQL Query语句
-func (pmd *PooledMysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
+func (pmd *PooledMysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
+	return pmd.MysqlDB.QueryRows(stmt)
 
-	rows, err = conn.Query(stmt)
-	return
 }
 
 // QueryRow 执行MySQL Query语句
-func (pmd *PooledMysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
-
-	row = conn.QueryRow(stmt)
-	return
+func (pmd *PooledMysqlDB) QueryRow(stmt string) (row *QueryRow, err error) {
+	return pmd.MysqlDB.QueryRow(stmt)
 }
