@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -46,49 +45,6 @@ type MysqlDB struct {
 	ConnectTimeout int
 }
 
-// PooledMysqlDB Mysql主机实例
-type PooledMysqlDB struct {
-	MysqlDB
-	conn *sql.DB
-	lock *sync.Mutex
-}
-
-// NewPooledMysqlDBWithParam 带参数创建MySQL数据库
-func NewPooledMysqlDBWithParam(
-	ip string, port int, userName, passwd string) (
-	pmd *PooledMysqlDB) {
-	pmd = NewPooledMysqlDB()
-	pmd.IP = ip
-	pmd.Port = port
-	pmd.UserName = userName
-	pmd.Passwd = passwd
-	pmd.DatabaseType = dbTypeMysql
-
-	return
-}
-
-// NewPooledMysqlDBWithAllParam 带参数创建MySQL数据库
-func NewPooledMysqlDBWithAllParam(
-	ip string, port int, userName, passwd, dbName string) (
-	pmd *PooledMysqlDB) {
-	pmd = NewPooledMysqlDB()
-	pmd.IP = ip
-	pmd.Port = port
-	pmd.UserName = userName
-	pmd.Passwd = passwd
-	pmd.DBName = dbName
-
-	return
-}
-
-// NewPooledMysqlDB 创建MySQL数据库
-func NewPooledMysqlDB() (pmd *PooledMysqlDB) {
-	pmd = new(PooledMysqlDB)
-	pmd.DatabaseType = dbTypeMysql
-	pmd.lock = new(sync.Mutex)
-	return
-}
-
 // NewMysqlDB 创建MySQL数据库
 func NewMysqlDB() (md *MysqlDB) {
 	md = new(MysqlDB)
@@ -111,29 +67,6 @@ func NewMysqlDBWithAllParam(
 }
 
 // GetConnection 获取数据库连接
-func (md *MysqlDB) GetConnection() (*sql.DB, error) {
-	connStr := md.fillConnStr()
-
-	stmtDB, err := sql.Open(md.DatabaseType, connStr)
-	if err != nil {
-		if stmtDB != nil {
-			stmtDB.Close()
-		}
-		return nil, err
-	}
-
-	stmtDB.SetMaxOpenConns(0)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
-	if err := stmtDB.PingContext(ctx); err != nil {
-		return nil, err
-	}
-
-	return stmtDB, nil
-}
-
-// GetConnection 获取数据库连接
 func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 	connStr := md.fillConnStr()
 
@@ -144,12 +77,6 @@ func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 		}
 		return nil, err
 	}
-
-
-
-	stmtDB.SetMaxOpenConns(1)
-	stmtDB.SetMaxIdleConns(1)
-	stmtDB.SetConnMaxLifetime(time.Second*3)
 
 	conn, err := stmtDB.Conn(ctx);
 	if err != nil {
@@ -162,131 +89,6 @@ func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 	return conn, nil
 }
 
-// CloseConnection 获取数据库连接
-func (pmd *PooledMysqlDB) CloseConnection() (err error) {
-	if pmd.conn == nil {
-		return
-	}
-
-	err = pmd.conn.Close()
-	return
-}
-
-// GetConnection 获取数据库连接
-func (pmd *PooledMysqlDB) GetConnection() (conn *sql.DB, err error) {
-	pmd.lock.Lock()
-	defer func() {
-		pmd.lock.Unlock()
-	}()
-
-	if pmd.conn != nil {
-		conn = pmd.conn
-		return
-	}
-
-	conn, err = pmd.MysqlDB.GetConnection()
-	if err != nil {
-		return
-	}
-
-	conn.SetConnMaxLifetime(0)
-	conn.SetMaxOpenConns(0)
-	if err := conn.Ping(); err != nil {
-		return nil, err
-	}
-	pmd.conn = conn
-
-	return
-}
-
-// ExecChange 执行MySQL Query语句
-func (pmd *PooledMysqlDB) ExecChange(stmt string, args ...interface{}) (
-	result sql.Result, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
-
-	result, err = conn.Exec(stmt, args...)
-	return
-}
-
-// ExecQuery 执行MySQL Query语句
-func (pmd *PooledMysqlDB) ExecQuery(stmt string) (rows *sql.Rows, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
-
-	rows, err = conn.Query(stmt)
-	return
-}
-
-// QueryRows 执行MySQL Query语句
-func (pmd *PooledMysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
-
-	rows, err = conn.Query(stmt)
-	return
-}
-
-// QueryRow 执行MySQL Query语句
-func (pmd *PooledMysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
-	conn, err := pmd.GetConnection()
-	if err != nil {
-		return
-	}
-
-	row = conn.QueryRow(stmt)
-	return
-}
-
-// ExecQuery 执行MySQL Query语句
-func (md *MysqlDB) ExecQuery(stmt string) (rows *sql.Rows, err error) {
-	conn, err := md.GetConnection()
-	if conn != nil {
-		defer conn.Close()
-	}
-	if err != nil {
-		return
-	}
-
-	rows, err = conn.Query(stmt)
-	return
-}
-
-// QueryRows 执行MySQL Query语句，返回多条数据
-func (md *MysqlDB) QueryRows(stmt string) (rows *sql.Rows, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("query rows failed <-- %s", err.Error())
-		}
-	}()
-
-	connStr := md.fillConnStr()
-
-	db, err := sql.Open(md.DatabaseType, connStr)
-	if err != nil {
-		if db != nil {
-			db.Close()
-		}
-		return nil, err
-	}
-
-	rows, err = db.Query(stmt)
-	if err != nil {
-		if rows != nil {
-			rows.Close()
-		}
-		return
-	}
-
-	return
-}
-
 type Field struct {
 	Name string
 	Type string
@@ -297,9 +99,21 @@ func (f *Field) FieldType() string {
 	return f.Type
 }
 
+type QueryRow struct {
+	Fields []Field
+	Record map[string]interface{}
+}
+
 type QueryRows struct {
 	Fields []Field
 	Records []map[string]interface{}
+}
+
+func NewQueryRow() *QueryRow {
+	queryRow := new(QueryRow)
+	queryRow.Fields = make([]Field, 0)
+	queryRow.Record = make(map[string]interface{})
+	return queryRow
 }
 
 func NewQueryRows() *QueryRows {
@@ -311,7 +125,7 @@ func NewQueryRows() *QueryRows {
 
 
 // QueryRowsInDict 执行MySQL Query语句，返回多条数据
-func (md *MysqlDB) QueryRowsInDict(stmt string) (queryRows *QueryRows, err error) {
+func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows failed <-- %s", err.Error())
@@ -460,35 +274,29 @@ func getDataType(dbColType string) (colType string) {
 
 	colType = "string"
 	return
-
-	// sql.NullBool
-	// sql.NullFloat64
-	// sql.NullInt64
-	// sql.NullString
 }
 
-
-
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
-func (md *MysqlDB) QueryRow(stmt string) (row *sql.Row, err error) {
+func (md *MysqlDB) QueryRow(stmt string) (row *QueryRow, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
-
-	conn, err := md.getRealConnection(ctx)
+	queryRows, err := md.QueryRows(stmt)
 	if err != nil {
-		if conn != nil {
-			defer conn.Close()
-		}
 		return
 	}
 
-	row = conn.QueryRowContext(ctx, stmt)
+	if len(queryRows.Records) < 1 {
+		return
+	}
+
+	row = NewQueryRow()
+	row.Fields = queryRows.Fields
+	row.Record = queryRows.Records[0]
+
 	return
 }
 
@@ -501,14 +309,14 @@ func (md *MysqlDB) ExecChange(stmt string, args ...interface{}) (
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
 	conn, err := md.getRealConnection(ctx)
+	if conn != nil {
+		defer conn.Close()
+	}
 	if err != nil {
-		if conn != nil {
-			defer conn.Close()
-		}
 		return
 	}
 
