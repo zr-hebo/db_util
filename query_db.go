@@ -101,7 +101,7 @@ func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 		return nil, err
 	}
 
-	conn, err := stmtDB.Conn(ctx);
+	conn, err := stmtDB.Conn(ctx)
 	if err != nil {
 		if conn != nil {
 			conn.Close()
@@ -128,30 +128,29 @@ type QueryRow struct {
 }
 
 type QueryRows struct {
-	Fields []Field
+	Fields  []Field
 	Records []map[string]interface{}
 }
 
-func NewQueryRow() *QueryRow {
+func newQueryRow() *QueryRow {
 	queryRow := new(QueryRow)
 	queryRow.Fields = make([]Field, 0)
 	queryRow.Record = make(map[string]interface{})
 	return queryRow
 }
 
-func NewQueryRows() *QueryRows {
+func newQueryRows() *QueryRows {
 	queryRows := new(QueryRows)
 	queryRows.Fields = make([]Field, 0)
 	queryRows.Records = make([]map[string]interface{}, 0)
 	return queryRows
 }
 
-
-// QueryRowsInDict 执行MySQL Query语句，返回多条数据
+// QueryRows 执行MySQL Query语句，返回多条数据
 func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query rows failed <-- %s", err.Error())
+			err = fmt.Errorf("query rows on %s:%d failed <-- %s", md.IP, md.Port, err.Error())
 		}
 	}()
 
@@ -179,11 +178,11 @@ func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	}
 
 	fields := make([]Field, 0, len(colTypes))
-	for _, colType := range colTypes{
-		fields = append(fields, Field{Name:colType.Name(), Type:getDataType(colType.DatabaseTypeName())})
+	for _, colType := range colTypes {
+		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
-	queryRows = NewQueryRows()
+	queryRows = newQueryRows()
 	queryRows.Fields = fields
 	for rawRows.Next() {
 		receiver := createReceiver(fields)
@@ -232,7 +231,7 @@ func createReceiver(fields []Field) (receiver []interface{}) {
 
 func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[string]interface{}) {
 	record = make(map[string]interface{})
-	for idx := 0; idx < len(fields); idx ++ {
+	for idx := 0; idx < len(fields); idx++ {
 		field := fields[idx]
 		value := receiver[idx]
 		switch field.Type {
@@ -266,7 +265,8 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 				record[field.Name] = nil
 				if nullVal.Valid {
 					record[field.Name] = nullVal.Bool
-				}				}
+				}
+			}
 		default:
 			nullVal := value.(*sql.NullString)
 			record[field.Name] = nil
@@ -280,14 +280,14 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 
 func getDataType(dbColType string) (colType string) {
 	var columnTypeDict = map[string]string{
-		"VARCHAR": "string",
-		"TEXT": "string",
+		"VARCHAR":  "string",
+		"TEXT":     "string",
 		"NVARCHAR": "string",
 		"DATETIME": "float64",
-		"DECIMAL": "float64",
-		"BOOL": "bool",
-		"INT": "int64",
-		"BIGINT": "int64",
+		"DECIMAL":  "float64",
+		"BOOL":     "bool",
+		"INT":      "int64",
+		"BIGINT":   "int64",
 	}
 
 	colType, ok := columnTypeDict[dbColType]
@@ -316,7 +316,7 @@ func (md *MysqlDB) QueryRow(stmt string) (row *QueryRow, err error) {
 		return
 	}
 
-	row = NewQueryRow()
+	row = newQueryRow()
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
 
