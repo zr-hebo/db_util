@@ -114,6 +114,7 @@ func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
 	return conn, nil
 }
 
+// Field 字段
 type Field struct {
 	Name string
 	Type string
@@ -124,11 +125,13 @@ func (f *Field) FieldType() string {
 	return f.Type
 }
 
+// QueryRow 查询单行数据
 type QueryRow struct {
 	Fields []Field
 	Record map[string]interface{}
 }
 
+// QueryRows 查询多行数据
 type QueryRows struct {
 	Fields  []Field
 	Records []map[string]interface{}
@@ -285,7 +288,7 @@ func getDataType(dbColType string) (colType string) {
 		"VARCHAR":  "string",
 		"TEXT":     "string",
 		"NVARCHAR": "string",
-		"DATETIME": "float64",
+		"DATETIME": "string",
 		"DECIMAL":  "float64",
 		"BOOL":     "bool",
 		"INT":      "int64",
