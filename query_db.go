@@ -313,7 +313,7 @@ func (md *MysqlDB) QueryRow(stmt string) (row *QueryRow, err error) {
 	}()
 
 	queryRows, err := md.QueryRows(stmt)
-	if err != nil {
+	if err != nil || queryRows == nil {
 		return
 	}
 
