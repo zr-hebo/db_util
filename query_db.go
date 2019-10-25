@@ -192,9 +192,11 @@ func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	queryRows = newQueryRows()
 	queryRows.Fields = fields
 	for rawRows.Next() {
+		fmt.Printf("ready to scan")
 		receiver := createReceiver(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
+			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
 			return
 		}
 
