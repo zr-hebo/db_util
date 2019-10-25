@@ -183,9 +183,9 @@ func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	}
 
 	fields := make([]Field, 0, len(colTypes))
-	fmt.Printf("total %d cols", len(colTypes))
+	fmt.Printf("total %d cols\n", len(colTypes))
 	for _, colType := range colTypes {
-		fmt.Printf("col %s: %s", colType.Name(), colType.DatabaseTypeName())
+		fmt.Printf("col %s: %s\n", colType.Name(), colType.DatabaseTypeName())
 		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
