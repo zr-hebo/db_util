@@ -173,7 +173,7 @@ func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	if rawRows != nil {
 		defer rawRows.Close()
 	}
-	if err != nil || !rawRows.Next() {
+	if err != nil {
 		return
 	}
 
