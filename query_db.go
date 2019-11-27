@@ -169,6 +169,9 @@ func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 		return nil, err
 	}
 
+	db.SetMaxOpenConns(1)
+	db.SetConnMaxLifetime(time.Second * 30)
+
 	rawRows, err := db.Query(stmt)
 	if rawRows != nil {
 		defer rawRows.Close()
