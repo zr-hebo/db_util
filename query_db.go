@@ -91,29 +91,6 @@ func (md *MysqlDB) getConnection() (*sql.DB, error) {
 	return stmtDB, nil
 }
 
-// GetConnection 获取数据库连接
-func (md *MysqlDB) getRealConnection(ctx context.Context) (*sql.Conn, error) {
-	connStr := md.fillConnStr()
-
-	stmtDB, err := sql.Open(md.DatabaseType, connStr)
-	if err != nil {
-		if stmtDB != nil {
-			stmtDB.Close()
-		}
-		return nil, err
-	}
-
-	conn, err := stmtDB.Conn(ctx)
-	if err != nil {
-		if conn != nil {
-			conn.Close()
-		}
-		return nil, err
-	}
-
-	return conn, nil
-}
-
 // Field 字段
 type Field struct {
 	Name string
@@ -339,30 +316,6 @@ func (md *MysqlDB) QueryRow(stmt string) (row *QueryRow, err error) {
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
 
-	return
-}
-
-// ExecChange 执行MySQL DML Query语句
-func (md *MysqlDB) ExecChange(stmt string, args ...interface{}) (
-	result sql.Result, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("execute dml failed <-- %s", err.Error())
-		}
-	}()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	conn, err := md.getRealConnection(ctx)
-	if conn != nil {
-		defer conn.Close()
-	}
-	if err != nil {
-		return
-	}
-
-	result, err = conn.ExecContext(ctx, stmt, args...)
 	return
 }
 

@@ -87,12 +87,6 @@ func (pmd *PooledMysqlDB) GetConnection() (conn *sql.DB, err error) {
 	return
 }
 
-// ExecChange 执行MySQL Query语句
-func (pmd *PooledMysqlDB) ExecChange(stmt string, args ...interface{}) (
-	result sql.Result, err error) {
-	return pmd.MysqlDB.ExecChange(stmt, args...)
-}
-
 // QueryRows 执行MySQL Query语句
 func (pmd *PooledMysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	return pmd.MysqlDB.QueryRows(stmt)
