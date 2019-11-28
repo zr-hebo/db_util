@@ -152,7 +152,7 @@ func newQueryRows() *QueryRows {
 }
 
 // QueryRows 执行MySQL Query语句，返回多条数据
-func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
+func (md *MysqlDB) QueryRows(querySQL string) (queryRows *QueryRows, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows on %s:%d failed <-- %s", md.IP, md.Port, err.Error())
@@ -172,7 +172,17 @@ func (md *MysqlDB) QueryRows(stmt string) (queryRows *QueryRows, err error) {
 	db.SetMaxOpenConns(1)
 	db.SetConnMaxLifetime(time.Second * 30)
 
-	rawRows, err := db.Query(stmt)
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if conn != nil {
+		defer conn.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	rawRows, err := conn.QueryContext(ctx, querySQL)
+	// rawRows, err := db.Query(stmt)
 	if rawRows != nil {
 		defer rawRows.Close()
 	}
